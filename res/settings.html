@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>NetPrinter Settings</title>
+    <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css">
+    
+    <link rel="stylesheet" type="text/css" href="css/fontawesome.min.css">
+    <link rel="stylesheet" type="text/css" href="css/regular.min.css">
+</head>
+<body>
+    <div class="container">
+        <h3>NetPrinter</h3>
+        <div class="row">
+        <div class="col-4">
+            <div class="form-group"><div class="input-group">
+                <div class="input-group-prepend"><button data-uid="add" class="btn btn-primary">+</button></div>
+                <div class="input-group-append"><button data-uid="del" class="btn btn-secondary">-</button></div>
+            </div>
+            <div>
+                <select data-uid="printers" multiple="false" size="10" style="width:100%">
+                    
+                </select>
+            </div></div>
+        </div>
+        <div data-uid="pnlsetup" class="col-8" style="visibility:hidden;">
+            <h4>Printer Setup</h4>
+            <hr>
+            <div class="form-gtoup">
+            <div class="input-group">
+                <div class="input-group-prepend"><span class="input-group-text">Printer</span></div>
+                <select data-uid="fldprint" class="form-control">
+
+                </select>
+            </div>
+            <div class="input-group">
+                <div class="input-group-prepend"><span class="input-group-text">Port</span></div>
+                <input data-uid="fldport" class="form-control" type="text" value="9100">
+            </div>
+            </div>
+            <hr>
+            <div class="col-12 text-right">
+            <button data-uid="btnok" class="btn btn-primary">OK</button>
+            <button data-uid="btncancel" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+        </div>
+    </div>
+<script type="text/javascript">
+const { ipcRenderer } = require('electron');
+
+
+if(Object.defineProperty) Object.defineProperty(Object.prototype, 'expand', { value: function(o) { Object.assign(this.prototype || this, o); }, enumerable: false });
+else Object.prototype.expand = function(o) { Object.assign(this.prototype || this, o); };
+
+Function.expand({
+	subclass: function(constructor) {
+		function surrogate() {}
+		surrogate.prototype = this.prototype;
+		var protoObj = new surrogate();
+		protoObj.constructor = constructor;
+		constructor.prototype = protoObj;
+	}
+});
+
+document.expand({ start: function(cb) { this.readyState === "loading" ? this.addEventListener('DOMContentLoaded',cb) : window.setTimeout(cb,100);	} });
+
+Element.expand({
+	toggleDisplay: function(b) { b=b||true; this.style['display'] = (this.style['display'] == 'block' || !b) ? 'none' : 'block'; },
+	onlyMe: function(s) {
+		var p = this.parentElement; for(var i = 0; i < p.children.length; i++) {
+			p.children[i].classList.remove(s);
+		}
+		this.classList.add(s);
+	},
+	empty: function() {while(this.lastChild)this.removeChild(this.lastChild);},
+	remove: function() {this.parentElement.removeChild(this);},
+	initUI: function() {
+		var ui = {}, eaCtrls = this.querySelectorAll('[data-uid], [data-widget], input');
+		for(var i = 0; i < eaCtrls.length; i++) {
+			var t = eaCtrls[i].getAttribute('data-widget'),
+				n = eaCtrls[i].getAttribute('data-uid') || eaCtrls[i].id,
+				//e = (t && ControlTypes[t]) ? ControlTypes[t](eaCtrls[i]) : eaCtrls[i];
+				e = eaCtrls[i];
+			if(n) ui[n] = e;
+		}
+		
+		return ui;
+	},
+	applyStyles: function(s){for(var k in s)this.style[k]=s[k];}
+});
+
+function createUUID() {
+	// http://www.ietf.org/rfc/rfc4122.txt
+	var hexDigits = "0123456789abcdef";
+	var s = [];
+	for (var i = 0; i < 36; i++) {
+		s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+	}
+	s[14] = "4";  // bits 12-15 of the time_hi_and_version field to 0010
+	s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);  // bits 6-7 of the clock_seq_hi_and_reserved to 01
+	s[8] = s[13] = s[18] = s[23] = "-";
+
+	var uuid = s.join("");
+	return uuid;
+}
+
+document.start( () => {
+    window.UI = document.body.initUI();
+
+    window.UI['btnok'].addEventListener('click', () => {
+        var printer = {
+            name: window.UI['fldprint'].value,
+            port: parseInt(window.UI['fldport'].value),
+            id: createUUID()
+        };
+
+        var e = document.createElement('option');
+        e.innerText = printer.name;
+        e.value = printer.id;
+
+        window.UI['printers'].add(e);
+
+        ipcRenderer.send('addPrinter', printer);
+        window.UI['pnlsetup'].style.visibility = "hidden";
+    });
+
+    window.UI['btncancel'].addEventListener('click', () => {
+        window.UI['pnlsetup'].style.visibility = "hidden";
+    });
+
+    window.UI['add'].addEventListener('click', () => {
+        window.UI['pnlsetup'].style.visibility = "visible";
+    });
+
+    window.UI['del'].addEventListener('click', () => {
+        var plist = window.UI['printers'];
+        if(plist.selectedIndex < 0) return;
+        var value = plist.options[plist.selectedIndex].value;
+        if(plist.selectedIndex >= 0) plist.remove(plist.selectedIndex);
+        ipcRenderer.send('removePrinter', value);
+    });
+});
+
+
+ipcRenderer.on('setPrinterList', (event, list) => {
+    UI['fldprint'].empty();
+    for(var i = 0; i < list.length; i++) {
+        var e = document.createElement('option');
+        e.innerText = list[i].name;
+        e.value = list[i].name;
+        UI['fldprint'].appendChild(e);
+    }
+});
+
+ipcRenderer.on('setConfigList', (event, list) => {
+    UI['printers'].empty();
+    for(var i = 0; i < list.length; i++) {
+        var e = document.createElement('option');
+        e.innerText = list[i].name;
+        e.value = list[i].id;
+        e.data = list[i];
+        UI['printers'].appendChild(e);
+    }
+});
+
+ipcRenderer.send('getPrinterList');
+ipcRenderer.send('getConfigList');
+</script>
+</body>
+</html>

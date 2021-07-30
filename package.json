@@ -1,0 +1,19 @@
+{
+  "name": "netprinter",
+  "version": "1.0.0",
+  "description": "Turn a USB printer into a network printer.",
+  "main": "main.js",
+  "scripts": {
+    "test": "electron ."
+  },
+  "author": "D. Oliver Brown",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^13.1.7",
+    "electron-packager": "^15.3.0",
+    "electron-rebuild": "^2.3.5"
+  },
+  "dependencies": {
+    "printer": "^0.4.0"
+  }
+}
